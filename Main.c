@@ -39,5 +39,5 @@ int main()
 
     ListDtor(&my_list);
 
-    return (int)Error::NO_ERROR;
+    return (int)NO_ERROR;
 }

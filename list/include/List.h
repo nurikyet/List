@@ -2,17 +2,17 @@
 #define LIST_H_INCLUDED
 
 #include "Types.h"
-#include "logfile.h"
+#include "../../log/include/logfile.h"
 
 #define LIST_CONSTRUCT(nick, quantity) struct List nick = {};          \
                                        ListCtor(&nick, quantity);      \
                                        nick.name = #nick;
 
-#define ARRAY_OK(arr) if (arr == nullptr)                                                                      \
+#define ARRAY_OK(arr) if (arr == NULL)                                                                      \
                       {                                                                                        \
                           my_list->capacity = 0;                                                               \
                           fprintf(LOG_FILE, "Function %s: not enough memory to allocate for " #arr, __func__); \
-                          return (int)Error::ERROR_MEMORY;                                                     \
+                          return (int)ERROR_MEMORY;                                                     \
                       }
 
 #define LIST_DUMP(my_list){ ListDump(LOG_FILE, my_list, __func__, __FILE__, __LINE__);                         \
@@ -48,7 +48,7 @@ struct List
     int free;
 };
 
-enum class Error
+enum Error
 {
     NO_ERROR                               = 0,
     ERROR_CAPACITY                         = 1 << 0,

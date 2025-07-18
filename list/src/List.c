@@ -4,9 +4,9 @@
 #include <stdlib.h>
 #include <time.h>
 
-#include "List.h"
-#include "logfile.h"
-#include "Types.h"
+#include "../include/List.h"
+#include "../../log/include/logfile.h"
+#include "../include/Types.h"
 
 #define ABOBA printf("\n<<I work in a FILE %s(%d) in %s>>\n", __FILE__, __LINE__, __func__)
 
@@ -31,6 +31,7 @@ int ListCtor(struct List* my_list, int size)
         (my_list->next)[i] = i + 1;
     }
     (my_list->next)[0] = 0;
+    (my_list->next)[size - 1] = 0; 
 
     my_list->pred = (int*) calloc(array_size, sizeof(char));
     ARRAY_OK(my_list->pred);
@@ -40,7 +41,7 @@ int ListCtor(struct List* my_list, int size)
     my_list->free = 1;
     my_list->capacity = 1;
 
-    return (int)Error::NO_ERROR;
+    return (int)NO_ERROR;
 }
 
 int ListDtor(struct List* my_list)
@@ -49,15 +50,15 @@ int ListDtor(struct List* my_list)
     free(my_list->next);
     free(my_list->pred);
 
-    my_list->data = nullptr;
-    my_list->next = nullptr;
-    my_list->pred = nullptr;
+    my_list->data = NULL;
+    my_list->next = NULL;
+    my_list->pred = NULL;
 
     my_list->capacity  = POISON;
 
     my_list->free = POISON;
 
-    return (int)Error::NO_ERROR;
+    return (int)NO_ERROR;
 }
 
 void ListDump(FILE* fp, struct List* my_list, const char* func, const char* file, const int line)
@@ -73,7 +74,7 @@ void ListDump(FILE* fp, struct List* my_list, const char* func, const char* file
     fprintf(fp, "{\n");
     fprintf(fp, "capacity = %d\n", my_list->capacity);
 
-    char liner[LINE_LEN]= "";
+    char liner[LINE_LEN];
     memset(liner, '-', (7*my_list->size - 2));
 
     for (int i = 0; i < my_list->size; i++)
@@ -116,37 +117,37 @@ int ListOk(FILE* fp, struct List* my_list)
 
     if (!my_list->capacity)
     {
-        result |= (int)Error::ERROR_CAPACITY;
+        result |= (int)ERROR_CAPACITY;
     }
 
     if (my_list->capacity < 0)
     {
-        result |= (int)Error::ERROR_CAPACITY;
+        result |= (int)ERROR_CAPACITY;
     }
 
     if (!my_list->data)
     {
-        result |= (int)Error::ERROR_DATA;
+        result |= (int)ERROR_DATA;
     }
 
-    if (my_list->next)
+    if (!my_list->next) 
     {
-        result |= (int)Error::ERROR_NEXT;
+        result |= (int)ERROR_NEXT;
     }
 
-    if (my_list->pred)
+    if (!my_list->pred) 
     {
-        result |= (int)Error::ERROR_PRED;
+        result |= (int)ERROR_PRED;
     }
 
-    if (my_list == nullptr)
+    if (my_list == NULL)
     {
-        result |= (int)Error::ERROR_STRUCT;
+        result |= (int)ERROR_STRUCT;
     }
 
-    if (my_list->data == nullptr)
+    if (my_list->data == NULL)
     {
-        result |= (int)Error::ERROR_MEMORY;
+        result |= (int)ERROR_MEMORY;
     }
 
     int new_result = ListVerify(my_list, result);
@@ -159,39 +160,40 @@ void PrintError(FILE* fp, int result)
 {
     assert(fp);
 
-    if ((result & (int)Error::ERROR_CAPACITY) != 0)
+    if ((result & (int)ERROR_CAPACITY) != 0)
         fprintf(fp, "Capacity must be > 0\n");
 
-    if ((result & (int)Error::ERROR_DATA) != 0)
+    if ((result & (int)ERROR_DATA) != 0)
         fprintf(fp, "address of data == nullptr\n");
 
-    if ((result & (int)Error::ERROR_NEXT) != 0)
+    if ((result & (int)ERROR_NEXT) != 0)
         fprintf(fp, "address of next == nullptr\n");
 
-    if ((result & (int)Error::ERROR_PRED) != 0)
+    if ((result & (int)ERROR_PRED) != 0)
         fprintf(fp, "address of pred == nullptr\n");
 
-    if ((result & (int)Error::ERROR_STRUCT) != 0)
+    if ((result & (int)ERROR_STRUCT) != 0)
         fprintf(fp, "address of struct == nullptr\n");
 
-    if ((result & (int)Error::ERROR_ZERO_ELEMENT) != 0)
+    if ((result & (int)ERROR_ZERO_ELEMENT) != 0)
         fprintf(fp, "The first element is not equal to the poisonous value\n");
 
-    if ((result & (int)Error::ERROR_DIFFERENCE_BETWEEN_NEXT_AND_PRED) != 0)
+    if ((result & (int)ERROR_DIFFERENCE_BETWEEN_NEXT_AND_PRED) != 0)
         fprintf(fp, "The order in the arrays next and pred is different\n");
 }
 
 int ListInsertAfter(struct List* my_list, int index, int element)
 {
-    if (index < 0)
+    if (index < 0 || index >= my_list->size)
     {
-        fprintf(stderr, "The index must be greater than zero, and you entered - %d\n", index);
+        fprintf(stderr, "Index must be in [0, %d), but you entered - %d\n", my_list->size, index);
+        return (int)ERROR_INDEX;
     }
 
-    else if (index > my_list->capacity)
+    if (my_list->free == 0) 
     {
-        fprintf(stderr, "Index cannot be greater than capacity, but you entered index - %d, capacity - %d\n", index, my_list->capacity);
-        return (int)Error::ERROR_MEMORY;
+        fprintf(stderr, "No free space available\n");
+        return (int)ERROR_MEMORY;
     }
 
     int free_index = my_list->free;
@@ -200,12 +202,11 @@ int ListInsertAfter(struct List* my_list, int index, int element)
     my_list->next[free_index]                = my_list->next[index];
     my_list->pred[my_list->next[free_index]] = free_index;
 
-
     my_list->data[free_index]                = element;
     my_list->next[index]                     = free_index;
     my_list->pred[free_index]                = index;
 
-    my_list->capacity ++;
+    my_list->capacity++;
     return free_index;
 }
 
@@ -213,26 +214,20 @@ int ListDelete(struct List* my_list, int index)
 {
     assert(my_list);
 
-    if (index <= 0)
+    if (index <= 0 || index >= my_list->size)
     {
-        fprintf(stderr, "The index must be greater than zero, and you entered - %d\n", index);
-        return (int)Error::ERROR_LEN;
+        fprintf(stderr, "Index must be in [1, %d), but you entered - %d\n", my_list->size, index);
+        return (int)ERROR_INDEX;
     }
 
-    else if (index > my_list->capacity)
-    {
-        fprintf(stderr, "Index cannot be greater than capacity, but you entered index - %d, capacity - %d\n", index, my_list->capacity);
-        return (int)Error::ERROR_MEMORY;
-    }
-
-    else if (my_list->pred[index] == -1)
+    if (my_list->pred[index] == VALUE)
     {
         fprintf(stderr, "The element with index [%d] has already been deleted\n", index);
+        return (int)ERROR_INDEX;
     }
 
     my_list->next[my_list->pred[index]] = my_list->next[index];
     my_list->pred[my_list->next[index]] = my_list->pred[index];
-
 
     if (index == GetHead(my_list))
     {
@@ -245,12 +240,11 @@ int ListDelete(struct List* my_list, int index)
     }
 
     my_list->data[index] = POISON;
-    my_list->pred[index] = my_list->pred[my_list->free];
+    my_list->pred[index] = VALUE;
     my_list->next[index] = my_list->free;
-
     my_list->free = index;
     my_list->capacity--;
-    return (int)Error::NO_ERROR;
+    return (int)NO_ERROR;
 }
 
 int ListVerify(struct List* my_list, int result)
@@ -259,7 +253,7 @@ int ListVerify(struct List* my_list, int result)
 
     if (my_list->data[0]!= POISON)
     {
-        result |= (int)Error::ERROR_ZERO_ELEMENT;
+        result |= (int)ERROR_ZERO_ELEMENT;
     }
 
     int new_next[LINE_LEN] = {};
@@ -270,9 +264,9 @@ int ListVerify(struct List* my_list, int result)
 
     while (actual_next != 0)
     {
-        new_next[count_next] = my_list->data[count_next];
+        new_next[count_next] = actual_next;
         actual_next = my_list->next[actual_next];
-        count_next ++;
+        count_next++;
     }
 
     int count_pred = 0;
@@ -280,22 +274,25 @@ int ListVerify(struct List* my_list, int result)
 
     while (actual_pred != 0)
     {
-        new_pred[count_pred] = my_list->data[actual_pred];
+        new_pred[count_pred] = actual_pred; 
         actual_pred = my_list->pred[actual_pred];
-        count_pred ++;
+        count_pred++;
     }
 
     if (count_next != count_pred)
     {
-        result |= (int)Error::ERROR_DIFFERENCE_BETWEEN_NEXT_AND_PRED;
+        result |= (int)ERROR_DIFFERENCE_BETWEEN_NEXT_AND_PRED;
     }
-
     else
     {
         for (int i = 0; i < count_pred; i++)
         {
+
             if (new_next[i] != new_pred[count_pred - 1 - i])
-                result |= (int)Error::ERROR_DIFFERENCE_BETWEEN_NEXT_AND_PRED;
+            {
+                result |= (int)ERROR_DIFFERENCE_BETWEEN_NEXT_AND_PRED;
+                break;
+            }
         }
     }
 
@@ -372,21 +369,29 @@ void GraphicDump(struct List* my_list)
 
 void CreateNewPicture()
 {
+    // Создаем папку если ее нет
+    system("mkdir -p ../log/img");
 
-    char command0[1000] = "dot list.dot -T png -o";
-    char command1[1000] = "C:\\Users\\User\\Documents\\���������\\List\\list";
-    char command2[] = ".png";
+    // Формируем команду для генерации изображения
+    char image_path[256];
+    snprintf(image_path, sizeof(image_path), "../log/img/list%s.png", num);
+    
+    char command[512];
+    snprintf(command, sizeof(command), "dot list.dot -T png -o %s", image_path);
+    
+    // Выполняем команду
+    system(command);
 
-    strcat(command1, num);
-    strcat(command1, command2);
+    // Записываем в лог (относительный путь)
+    fprintf(LOG_FILE, "<img src=\"img/list%s.png\">\n", num);
 
-    strcat(command0, command1);
-    system(command0);
-
-    fprintf(LOG_FILE, "<img src = \"%s\">\n", command1);   //height=\"400\", width=\"600\"
-
-    snprintf(num, 2, "%d", (1 + atoi(num)));
-
+    // Обновляем счетчик
+    int current_num = atoi(num);
+    if (current_num < 1000) {
+        snprintf(num, sizeof(num), "%d", current_num + 1);
+    } else {
+        strcpy(num, "1");  // Сброс счетчика
+    }
 }
 
 int GetTail(struct List* my_list)
@@ -401,41 +406,61 @@ int GetHead(struct List* my_list)
     return (my_list->next[0]);
 }
 
-int FindLogicalIndex(struct List* my_list, int physical_index)  // it's this function that should be working as O(1) in case of sorted list
+int FindLogicalIndex(struct List* my_list, int physical_index)
 {
     assert(my_list);
-    if (physical_index <= 0)    // what if it's bigger than capacity? :(
+
+    if (physical_index <= 0 || physical_index >= my_list->size)
     {
-        fprintf(stderr, "Physical index mast be > 0, but you entered - %d\n", physical_index);  // *must be
-        return (int)Error::ERROR_INDEX;
+        fprintf(stderr, "Physical index must be in (0, %d), but you entered - %d\n", my_list->size, physical_index);
+        return (int)ERROR_INDEX;
+    }
+
+    if (my_list->pred[physical_index] == VALUE)
+    {
+        fprintf(stderr, "Element at physical index %d is free\n", physical_index);
+        return (int)ERROR_INDEX;
     }
 
     int index = GetHead(my_list);
     int logical_index = 0;
 
-    while(index != physical_index)      // what if we cannot reach physical index by going by next, for example, if element on this index is in free? :( 
+    while (index != 0)
     {
+        if (index == physical_index)
+            return logical_index;
+            
         index = my_list->next[index];
         logical_index++;
     }
 
-    return logical_index;
+    fprintf(stderr, "Physical index %d not found in the list\n", physical_index);
+    return (int)ERROR_INDEX;
 }
 
-int FindPhysicalIndex(struct List* my_list, int logical_index)  // and this one (see line 404); save something like bool variable called sorted in list and check it here;
-{                                                               // if it is true, you don't need to go through next
+int FindPhysicalIndex(struct List* my_list, int logical_index)
+{
     assert(my_list);
 
-    if (logical_index < 0)  // what if bigger than size?<
+    if (logical_index < 0)
     {
-        fprintf(stderr, "Logical index mast be >= 0, but you entered - %d\n", logical_index);
+        fprintf(stderr, "Logical index must be >= 0, but you entered - %d\n", logical_index);
+        return (int)ERROR_INDEX;
     }
 
     int index = GetHead(my_list);
+    int current = 0;
 
-    for (int i = 0; i < logical_index; i++)
+    while (index != 0 && current < logical_index)
     {
         index = my_list->next[index];
+        current++;
+    }
+
+    if (index == 0)
+    {
+        fprintf(stderr, "Logical index %d out of range (list size=%d)\n", logical_index, current);
+        return (int)ERROR_INDEX;
     }
 
     return index;
@@ -445,21 +470,17 @@ int ListFind(struct List* my_list, int value)
 {
     assert(my_list);
 
-    int index = POISON;
-
-    for (int i = 1; i < my_list->size; i++)     // in find we usually go by next; what if there are two examples of value in list
-    {                                           // and going by i you found only second in logical order? 
-        if (my_list->data[i] == value)          // moreover: what if element lies out of first my_list->size elements? you just won't check it!
-        {
-            index = i;
-        }
-    }
-
-    if (index == POISON)
+    int index = GetHead(my_list);
+    while (index != 0)
     {
-        fprintf(stderr, "Sorry, there is no list with this value %d in the sheet", value);
+        if (my_list->data[index] == value)
+            return index;
+            
+        index = my_list->next[index];
     }
-    return index;
+
+    fprintf(stderr, "Value %d not found in the list\n", value);
+    return POISON;
 }
 
 int ListSort(struct List* my_list)
@@ -469,39 +490,56 @@ int ListSort(struct List* my_list)
 
     int* new_data = (int*) calloc(array_size, sizeof(char));
     ARRAY_OK(new_data);
-    new_data[0] = my_list->data[0];
+    new_data[0] = POISON;
 
     int* new_next = (int*) calloc(array_size, sizeof(char));
     ARRAY_OK(new_next);
-    new_next[0] = 1;
 
     int* new_pred = (int*) calloc(array_size, sizeof(char));
     ARRAY_OK(new_pred);
-    new_pred[0] = my_list->capacity - 1;        
 
-    int index = GetHead(my_list);
-    int count = 0;
+    int count = my_list->capacity - 1;
 
-    for (int i = 1; i < my_list->size; i++)
+    if (count > 0)
     {
-        if (my_list->pred[i] < 0)
+        int index = GetHead(my_list);
+
+        for (int i = 1; i <= count; i++)
         {
-            continue;
+            new_data[i] = my_list->data[index];
+            index = my_list->next[index];
         }
-        new_data[i] = my_list->data[index];
-        new_next[i] = my_list->next[index]; // ?? we do not save previous and next indices in sorted list: they will become consistent instead :(
-        new_pred[i] = my_list->pred[index];
-        index = my_list->next[index];
-        count++;
+
+        for (int i = 1; i <= count; i++)
+        {
+            new_next[i] = (i < count) ? i+1 : 0;
+            new_pred[i] = (i > 1) ? i-1 : 0;
+        }
+        new_next[0] = 1;    
+        new_pred[0] = count;    
+        new_pred[1] = 0;       
+    }
+    else
+    {
+        new_next[0] = 0;
+        new_pred[0] = 0;
     }
 
-    for (int i = count + 1; i < my_list->size; i++)
+
+    if (count + 1 < my_list->size)
     {
-        new_pred[i] = VALUE;
-        new_next[i] = i + 1;
-        new_data[i] = POISON;
+        for (int i = count + 1; i < my_list->size; i++)
+        {
+            new_data[i] = POISON;
+            new_pred[i] = VALUE;
+            new_next[i] = (i == my_list->size - 1) ? 0 : i+1;
+        }
+        my_list->free = count + 1;
     }
-    new_next[my_list->size - 1] = FIRST_VALUE;
+    else
+    {
+        my_list->free = 0;
+    }
 
     free(my_list->data);
     free(my_list->next);
@@ -511,5 +549,5 @@ int ListSort(struct List* my_list)
     my_list->next = new_next;
     my_list->pred = new_pred;
 
-    return (int)Error::NO_ERROR;
+    return (int)NO_ERROR;
 }
